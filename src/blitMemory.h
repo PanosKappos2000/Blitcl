@@ -57,8 +57,16 @@ namespace Blitcl
         // Keeps track of how much memory has been allocated for each type of allocation
         size_t typeAllocations[static_cast<size_t>(AllocationType::MaxTypes)];
 
+        static MemoryManagerState* s_pState;
+
+        inline MemoryManagerState() {
+            s_pState = this;
+
+            memset(typeAllocations, 0, sizeof(size_t) * static_cast<uint32_t>(AllocationType::MaxTypes));
+        }
+
         inline ~MemoryManagerState() {
-            BLIT_ASSERT(!typeAllocations[1])
+                BLIT_ASSERT(!typeAllocations[1])
 
                 BLIT_ASSERT(!typeAllocations[2])
 
@@ -76,26 +84,26 @@ namespace Blitcl
 
                 BLIT_ASSERT(!typeAllocations[12])
         }
-    };
 
-    static MemoryManagerState s_manager;
+        inline static MemoryManagerState* GetState() { return s_pState; }
+    };
 
     inline void* Alloc(AllocationType alloc, size_t size) {
 
-        BLIT_ASSERT(alloc != AllocationType::Unkown || alloc != AllocationType::MaxTypes)
+        BLIT_ASSERT(alloc != AllocationType::Unkown && alloc != AllocationType::MaxTypes)
 
-            s_manager.totalAllocated += size;
-        s_manager.typeAllocations[static_cast<size_t>(alloc)] += size;
+        MemoryManagerState::GetState()->totalAllocated += size;
+        MemoryManagerState::GetState()->typeAllocations[static_cast<size_t>(alloc)] += size;
 
         return malloc(size);
     }
 
     inline void Free(AllocationType alloc, void* pBlock, size_t size) {
 
-        BLIT_ASSERT(alloc != AllocationType::Unkown || alloc != AllocationType::MaxTypes)
+        BLIT_ASSERT(alloc != AllocationType::Unkown && alloc != AllocationType::MaxTypes)
 
-            s_manager.totalAllocated -= size;
-        s_manager.typeAllocations[static_cast<size_t>(alloc)] -= size;
+        MemoryManagerState::GetState()->totalAllocated -= size;
+        MemoryManagerState::GetState()->typeAllocations[static_cast<size_t>(alloc)] -= size;
 
         free(pBlock);
     }
@@ -115,15 +123,15 @@ namespace Blitcl
     // Log all allocations to catch memory leaks
     inline void LogAllocation(AllocationType alloc, size_t size) {
 
-        s_manager.totalAllocated += size;
+        MemoryManagerState::GetState()->totalAllocated += size;
 
-        s_manager.typeAllocations[static_cast<size_t>(alloc)] += size;
+        MemoryManagerState::GetState()->typeAllocations[static_cast<size_t>(alloc)] += size;
     }
 
     // Unlog allocations when freed, to catch memory leaks
     inline void LogFree(AllocationType alloc, size_t size) {
-        s_manager.totalAllocated -= size;
-        s_manager.typeAllocations[static_cast<size_t>(alloc)] -= size;
+        MemoryManagerState::GetState()->totalAllocated -= size;
+        MemoryManagerState::GetState()->typeAllocations[static_cast<size_t>(alloc)] -= size;
     }
 
     // This allocation function calls the constructor of the object that gets allocated(the constructor must have no parameters)
