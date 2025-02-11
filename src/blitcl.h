@@ -155,16 +155,17 @@ namespace Blitcl
 
 
 
-    template<typename T, // The type of pointer stored
-        AllocationType A = AllocationType::SmartPointer, // The allocation type that the allocator should keep track of
-        typename Ret = void> // The type that the custom destructor returns>
+    template<typename T,  // The type of pointer stored
+        AllocationType A,// The allocation type that the allocator should keep track of
+        typename Ret, // The type that the custom destructor returns>
+        typename... P>
     class SmartPointer
     {
     public:
 
         typedef Ret(*DstrPfn)(T*);
 
-        SmartPointer(T* pDataToCopy = nullptr, DstrPfn customDestructor = nullptr)
+        SmartPointer(T* pDataToCopy = nullptr,  DstrPfn customDestructor = nullptr)
         {
             // Allocated on the heap
             m_pData = NewAlloc<T>(A);
@@ -176,6 +177,15 @@ namespace Blitcl
                 // Redirect the pointer, in case the user wants to use it again
                 pDataToCopy = m_pData;
             }
+
+            m_customDestructor = customDestructor;
+        }
+
+        // Because of my poor design, I have to add the DstrPfn with no default value so that there are no overload conflicts on 0 args
+        SmartPointer(DstrPfn customDestructor, P&... params)
+        {
+            // Allocated on the heap
+            m_pData = NewAlloc<T>(A, params...);
 
             m_customDestructor = customDestructor;
         }

@@ -135,11 +135,11 @@ namespace Blitcl
     }
 
     // This allocation function calls the constructor of the object that gets allocated(the constructor must have no parameters)
-    template<typename T>
-    T* NewAlloc(AllocationType alloc)
+    template<typename T, typename... P>
+    T* NewAlloc(AllocationType alloc, P&... params)
     {
         LogAllocation(alloc, sizeof(T));
-        return new T();
+        return new T(params...);
     }
 
     // This free function calls the constructor of the object that get freed
