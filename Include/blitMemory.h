@@ -141,6 +141,13 @@ namespace Blitcl
         LogAllocation(alloc, sizeof(T));
         return new T(params...);
     }
+    
+    template<typename T, AllocationType A>
+    T* NewAlloc(size_t size)
+    {
+        LogAllocation(A, size);
+        return new T[size];
+    }
 
     // This free function calls the constructor of the object that get freed
     template<typename T>

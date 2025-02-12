@@ -16,7 +16,7 @@ namespace Blitcl
         {
             if (m_size > 0)
             {
-                m_pBlock = reinterpret_cast<T*>(Alloc(AllocationType::DynamicArray, m_capacity * sizeof(T)));
+                m_pBlock = NewAlloc<T, AllocationType::DynamicArray>(m_capacity * sizeof(T));
 
                 // TODO: I want to try removing this but it will break the application. Maybe I will create a branch at some point
                 Memzero(m_pBlock, m_size * sizeof(T));
