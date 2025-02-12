@@ -156,8 +156,8 @@ namespace Blitcl
 
 
     template<typename T,  // The type of pointer stored
-        AllocationType A,// The allocation type that the allocator should keep track of
-        typename Ret, // The type that the custom destructor returns>
+        AllocationType A = Blitcl::AllocationType::SmartPointer,// The allocation type that the allocator should keep track of
+        typename Ret = void, // The type that the custom destructor returns>
         typename... P>
     class SmartPointer
     {
