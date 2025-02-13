@@ -145,7 +145,7 @@ namespace Blitcl
     template<typename T, AllocationType A>
     T* NewAlloc(size_t size)
     {
-        LogAllocation(A, size);
+        LogAllocation(A, size * sizeof(T));
         return new T[size];
     }
 
