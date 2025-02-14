@@ -33,8 +33,11 @@ namespace Blitcl
         inline size_t GetSize() { return m_size; }
 
         inline T& operator [] (size_t index) { BLIT_ASSERT(index >= 0 && index < m_size) return m_pBlock[index]; }
+
         inline T& Front() { BLIT_ASSERT(m_size) m_pBlock[0]; }
+
         inline T& Back() { BLIT_ASSERT(m_size) return m_pBlock[m_size - 1]; }
+
         inline T* Data() { return m_pBlock; }
 
         void Fill(T value)
@@ -151,6 +154,31 @@ namespace Blitcl
                 LogFree(AllocationType::DynamicArray, temp * sizeof(T));
             }
         }
+    };
+
+    template<typename T, size_t S>
+    class StaticArray
+    {
+    public:
+        StaticArray()
+        {
+            static_assert(S > 0);
+            m_pData = NewAlloc<T, AllocationType::DynamicArray>(S);
+        }
+
+        inline T& operator [] (size_t idx) { BLIT_ASSERT(idx >= 0 && idx < S) return m_pData[idx]; }
+
+        inline T* Data() { return m_pData; }
+
+        inline size_t Size() { return S; }
+
+        ~StaticArray()
+        {
+            delete[] m_pData;
+            LogFree(AllocationType::DynamicArray, S * sizeof(T));
+        }
+    private:
+        T* m_pData;
     };
 
 
