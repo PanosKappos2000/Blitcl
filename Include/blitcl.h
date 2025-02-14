@@ -163,7 +163,6 @@ namespace Blitcl
         StaticArray()
         {
             static_assert(S > 0);
-            m_pData = NewAlloc<T, AllocationType::DynamicArray>(S);
         }
 
         inline T& operator [] (size_t idx) { BLIT_ASSERT(idx >= 0 && idx < S) return m_pData[idx]; }
@@ -174,11 +173,10 @@ namespace Blitcl
 
         ~StaticArray()
         {
-            delete[] m_pData;
-            LogFree(AllocationType::DynamicArray, S * sizeof(T));
+            
         }
     private:
-        T* m_pData;
+        T m_pData[S];
     };
 
 
