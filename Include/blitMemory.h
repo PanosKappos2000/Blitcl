@@ -7,6 +7,7 @@
 #include <cstring>
 #include <stdlib.h>
 #include <string.h>
+#include <utility>
 
 #ifdef BLITZEN_ENGINE
     #include "Core/blitAssert.h"
@@ -88,22 +89,28 @@ namespace Blitcl
         inline static MemoryManagerState* GetState() { return s_pState; }
     };
 
-    inline void* Alloc(AllocationType alloc, size_t size) {
+    template<typename T>
+    T* Alloc(AllocationType alloc, size_t size) {
 
         BLIT_ASSERT(alloc != AllocationType::Unkown && alloc != AllocationType::MaxTypes)
 
-        MemoryManagerState::GetState()->totalAllocated += size;
-        MemoryManagerState::GetState()->typeAllocations[static_cast<size_t>(alloc)] += size;
+        size_t s = size * sizeof(T);
 
-        return malloc(size);
+        MemoryManagerState::GetState()->totalAllocated += s;
+        MemoryManagerState::GetState()->typeAllocations[static_cast<size_t>(alloc)] += s;
+
+        return reinterpret_cast<T*>(malloc(s));
     }
 
-    inline void Free(AllocationType alloc, void* pBlock, size_t size) {
+    template<typename T>
+    void Free(AllocationType alloc, void* pBlock, size_t size) {
 
         BLIT_ASSERT(alloc != AllocationType::Unkown && alloc != AllocationType::MaxTypes)
 
-        MemoryManagerState::GetState()->totalAllocated -= size;
-        MemoryManagerState::GetState()->typeAllocations[static_cast<size_t>(alloc)] -= size;
+        size_t s = size * sizeof(T);
+
+        MemoryManagerState::GetState()->totalAllocated -= s;
+        MemoryManagerState::GetState()->typeAllocations[static_cast<size_t>(alloc)] -= s;
 
         free(pBlock);
     }
@@ -147,6 +154,41 @@ namespace Blitcl
     {
         LogAllocation(A, size * sizeof(T));
         return new T[size];
+    }
+
+    template<typename T, AllocationType A>
+    T* NewAlloc(const T& data)
+    {
+        LogAllocation(A, sizeof(T));
+        return new T(data);
+    }
+
+    template<typename T, AllocationType A>
+    T* NewAlloc(T&& data)
+    {
+        LogAllocation(A, sizeof(T));
+        return new T(std::move(data));
+    }
+
+    template<typename T, AllocationType A>
+    T* NewAlloc(size_t size, T& data)
+    {
+        LogAllocation(A, size * sizeof(T));
+
+        if (size > 0)
+        {
+            T* pHead = new T[size];
+            for (size_t i = 0; i < size; ++i)
+            {
+                Memcpy(&pHead[i], &data, sizeof(T));
+            }
+            return pHead;
+        }
+        else
+        {
+            // I could assert instead but whatever for now
+            return nullptr;
+        }
     }
 
     // This free function calls the constructor of the object that get freed
