@@ -8,10 +8,53 @@
 namespace Blitcl
 {
     template<typename T>
-    class DynamicArray
+    class DynamicArrayIterator
     {
     public:
-        
+        DynamicArrayIterator(T* ptr) :m_pElement{ptr}{}
+
+        inline bool operator !=(DynamicArrayIterator<T>& l) { return m_pElement != l.m_pElement; }
+
+        inline DynamicArrayIterator<T>& operator ++() { 
+            m_pElement++; 
+            return *this; 
+        }
+
+        inline DynamicArrayIterator<T>& operator ++(int) {
+            DynamicArrayIterator<T> temp = *this;
+            ++(*this);
+            return temp;
+        }
+
+        inline DynamicArrayIterator<T>& operator --() {
+            m_pElement--;
+            return *this;
+        }
+
+        inline DynamicArrayIterator<T>& operator --(int) {
+            DynamicArrayIterator<T> temp = *this;
+            --(*this);
+            return temp;
+        }
+
+        inline T& operator [](size_t idx) { return m_pElement[idx]; }
+
+        inline T& operator *() { return *m_pElement; }
+
+        inline T* operator ->() { return m_pElement; }
+    private:
+        T* m_pElement;
+    };
+
+    template<typename T>
+    class DynamicArray
+    {
+
+    /*
+        Constructors
+    */
+    public:
+
         // This version of the dynamic array constructor allocates the amount of memory speicified calling the default constructor
         DynamicArray(size_t initialSize = 0)
             :m_size{ initialSize }, m_capacity(initialSize* BLIT_DYNAMIC_ARRAY_CAPACITY_MULTIPLIER)
@@ -61,6 +104,19 @@ namespace Blitcl
             }
         }
 
+    /*
+        Iterators
+    */
+    public:
+        using Iterator = DynamicArrayIterator<T>;
+        inline Iterator begin() { return Iterator(m_pBlock); }
+        inline Iterator end() { return Iterator(m_pBlock + m_size); }
+
+    /*
+        Access functions and operators
+    */
+    public:
+
         inline size_t GetSize() { return m_size; }
 
         inline T& operator [] (size_t index) { BLIT_ASSERT(index >= 0 && index < m_size) return m_pBlock[index]; }
@@ -71,10 +127,22 @@ namespace Blitcl
 
         inline T* Data() { return m_pBlock; }
 
+    /*
+        Manipulation functions
+    */
+    public:
+
         void Fill(T value)
         {
             if (m_size > 0)
                 Memset(m_pBlock, value, m_size * sizeof(T));
+        }
+
+        void Fill(const T& val)
+        {
+            if(m_size > 0)
+                for(size_t i = 0; i < m_size; ++i)
+                    Memcpy(&m_pBlock[i], &val, sizeof(T))
         }
 
         void Resize(size_t newSize)
@@ -172,6 +240,9 @@ namespace Blitcl
             }
         }
 
+
+
+        // Desctructor
         ~DynamicArray()
         {
             if (m_capacity > 0)
@@ -181,12 +252,14 @@ namespace Blitcl
             }
         }
 
+    // Private member variables
     private:
 
         size_t m_size;
         size_t m_capacity;
         T* m_pBlock;
 
+    // Inner logic functions
     private:
 
         void RearrangeCapacity(size_t newSize)
@@ -207,6 +280,9 @@ namespace Blitcl
         }
     };
 
+
+
+
     template<typename T, size_t S>
     class StaticArray
     {
@@ -221,7 +297,7 @@ namespace Blitcl
             static_assert(S > 0);
 
             for (size_t i = 0; i < S; ++i)
-                Memcpy(&m_pData[i], &data, sizeof(T));
+                Memcpy(&m_array[i], &data, sizeof(T));
         }
 
         StaticArray(T&& data)
@@ -229,12 +305,12 @@ namespace Blitcl
             static_assert(S > 0);
 
             for (size_t i = 0; i < S; ++i)
-                Memcpy(&m_pData[i], &data, sizeof(T));
+                Memcpy(&m_array[i], &data, sizeof(T));
         }
 
-        inline T& operator [] (size_t idx) { BLIT_ASSERT(idx >= 0 && idx < S) return m_pData[idx]; }
+        inline T& operator [] (size_t idx) { BLIT_ASSERT(idx >= 0 && idx < S) return m_array[idx]; }
 
-        inline T* Data() { return m_pData; }
+        inline T* Data() { return m_array; }
 
         inline size_t Size() { return S; }
 
@@ -243,7 +319,7 @@ namespace Blitcl
             
         }
     private:
-        T m_pData[S];
+        T m_array[S];
     };
 
 
