@@ -3,10 +3,10 @@
 #include "blitMemory.h"
 #include <utility>
 
-#define BLIT_DYNAMIC_ARRAY_CAPACITY_MULTIPLIER   2
-
 namespace Blitcl
 {
+    constexpr uint8_t arrayCapacityMultiplier =  2;
+
     template<typename T>
     class DynamicArrayIterator
     {
@@ -57,7 +57,7 @@ namespace Blitcl
 
         // This version of the dynamic array constructor allocates the amount of memory speicified calling the default constructor
         DynamicArray(size_t initialSize = 0)
-            :m_size{ initialSize }, m_capacity(initialSize* BLIT_DYNAMIC_ARRAY_CAPACITY_MULTIPLIER)
+            :m_size{ initialSize }, m_capacity(initialSize* arrayCapacityMultiplier)
         {
             if (m_size > 0)
             {
@@ -67,7 +67,7 @@ namespace Blitcl
 
         // This version of the constructor allocates the amount of memory specified and then copies memory from data
         DynamicArray(size_t initialSize, T& data)
-            :m_size{initialSize}, m_capacity{initialSize * BLIT_DYNAMIC_ARRAY_CAPACITY_MULTIPLIER }
+            :m_size{initialSize}, m_capacity{initialSize * arrayCapacityMultiplier }
         {
             if (m_size > 0)
             {
@@ -81,21 +81,21 @@ namespace Blitcl
 
         // Same as the above but for RValues
         DynamicArray(size_t initialSize, T&& data)
-            :m_size{ initialSize }, m_capacity{ initialSize * BLIT_DYNAMIC_ARRAY_CAPACITY_MULTIPLIER }
+            :m_size{ initialSize }, m_capacity{ initialSize * arrayCapacityMultiplier }
         {
             if (m_size > 0)
             {
                 m_pBlock = NewAlloc<T, AllocationType::DynamicArray>(m_capacity);
                 for (size_t i = 0; i < initialSize; ++i)
                 {
-                    Memcpy(m_pBlock[i], &data, sizeof(T));
+                    Memcpy(&m_pBlock[i], &data, sizeof(T));
                 }
             }
         }
 
         // Initalizes the array by copying data from an already existing array
         DynamicArray(DynamicArray<T>& array)
-            :m_size(array.GetSize()), m_capacity(array.GetSize()* BLIT_DYNAMIC_ARRAY_CAPACITY_MULTIPLIER)
+            :m_size(array.GetSize()), m_capacity(array.GetSize()* arrayCapacityMultiplier)
         {
             if (m_size > 0)
             {
@@ -140,9 +140,9 @@ namespace Blitcl
 
         void Fill(const T& val)
         {
-            if(m_size > 0)
-                for(size_t i = 0; i < m_size; ++i)
-                    Memcpy(&m_pBlock[i], &val, sizeof(T))
+            if (m_size > 0)
+                for (size_t i = 0; i < m_size; ++i)
+                    Memcpy(&m_pBlock[i], &val, sizeof(T));
         }
 
         void Resize(size_t newSize)
@@ -173,13 +173,13 @@ namespace Blitcl
         void Reserve(size_t size)
         {
             BLIT_ASSERT(size)
-            RearrangeCapacity(size / BLIT_DYNAMIC_ARRAY_CAPACITY_MULTIPLIER);
+            RearrangeCapacity(size / arrayCapacityMultiplier);
         }
 
         void PushBack(T& newElement)
         {
             // If the allocations have reached a point where the amount of elements is above the capacity, increase the capacity
-            if (m_size + 1 > m_capacity)
+            if (m_size >= m_capacity)
             {
                 RearrangeCapacity(m_size + 1);
             }
@@ -247,8 +247,7 @@ namespace Blitcl
         {
             if (m_capacity > 0)
             {
-                delete [] m_pBlock;
-                LogFree(AllocationType::DynamicArray, m_capacity * sizeof(T));
+                DeleteAlloc<T>(Blitcl::AllocationType::DynamicArray, m_pBlock, m_capacity);
             }
         }
 
@@ -265,7 +264,7 @@ namespace Blitcl
         void RearrangeCapacity(size_t newSize)
         {
             size_t temp = m_capacity;
-            m_capacity = newSize * BLIT_DYNAMIC_ARRAY_CAPACITY_MULTIPLIER;
+            m_capacity = newSize * arrayCapacityMultiplier;
             T* pTemp = m_pBlock;
             m_pBlock = reinterpret_cast<T*>(Alloc(AllocationType::DynamicArray, m_capacity * sizeof(T)));
             if (m_size != 0)
@@ -274,8 +273,7 @@ namespace Blitcl
             }
             if (temp != 0)
             {
-                delete [] pTemp;
-                LogFree(AllocationType::DynamicArray, temp * sizeof(T));
+                DeleteAlloc<T>(Blitcl::AllocationType::DynamicArray, pTemp, temp);
             }
         }
     };
@@ -292,7 +290,7 @@ namespace Blitcl
             static_assert(S > 0);
         }
 
-        StaticArray(T& data)
+        StaticArray(const T& data)
         {
             static_assert(S > 0);
 
@@ -307,6 +305,11 @@ namespace Blitcl
             for (size_t i = 0; i < S; ++i)
                 Memcpy(&m_array[i], &data, sizeof(T));
         }
+
+        using Iterator = DynamicArrayIterator<T>;
+
+        Iterator begin() { return Iterator(m_array); }
+        Iterator end() { return Iterator(m_array + S); }
 
         inline T& operator [] (size_t idx) { BLIT_ASSERT(idx >= 0 && idx < S) return m_array[idx]; }
 
@@ -324,17 +327,14 @@ namespace Blitcl
 
 
 
-    template<typename T,  // The type of pointer stored
-        AllocationType A = Blitcl::AllocationType::SmartPointer,// The allocation type that the allocator should keep track of
-        typename Ret = void, // The type that the custom destructor returns>
-        typename... P>
+    template<typename T, AllocationType A = Blitcl::AllocationType::SmartPointer>
     class SmartPointer
     {
     public:
 
-        typedef Ret(*DstrPfn)(T*);
+        using Dstr = void(*)(T*);
 
-        SmartPointer(T* pDataToCopy = nullptr,  DstrPfn customDestructor = nullptr)
+        SmartPointer(T* pDataToCopy)
         {
             // Allocated on the heap
             m_pData = NewAlloc<T>(A);
@@ -346,8 +346,6 @@ namespace Blitcl
                 // Redirect the pointer, in case the user wants to use it again
                 pDataToCopy = m_pData;
             }
-
-            m_customDestructor = customDestructor;
         }
 
         SmartPointer(const T& data)
@@ -360,24 +358,27 @@ namespace Blitcl
             m_pData = NewAlloc<T, A>(std::move(data));
         }
 
-        // Because of my poor design, I have to add the DstrPfn with no default value so that there are no overload conflicts on 0 args
-        SmartPointer(DstrPfn customDestructor, P&... params)
+        // This version of the constructor has template parameter deduction
+        template<typename... P>
+        SmartPointer(P... params)
         {
             // Allocated on the heap
             m_pData = NewAlloc<T>(A, params...);
-
-            m_customDestructor = customDestructor;
         }
 
+        inline void SetCustomDestructor(Dstr func) { m_pfnDstr = func; }
+
         inline T* Data() { return m_pData; }
+
+        inline T* operator ->() { return m_pData; }
 
         ~SmartPointer()
         {
             // Call the additional destructor function if it was given on construction
-            if (m_customDestructor)
+            if (m_pfnDstr)
             {
                 if (m_pData)
-                    m_customDestructor(m_pData);
+                    m_pfnDstr(m_pData);
 
                 // The smart pointer trusts that the custom destructor did its job and free the block of memory
                 LogFree(A, sizeof(T));
@@ -391,7 +392,7 @@ namespace Blitcl
         T* m_pData;
 
         // Additional destructor function currently fixed type (void(*)(T*))
-        DstrPfn m_customDestructor;
+        Dstr m_pfnDstr = 0;
     };
 
     // Allocates a set amount of size on the heap, until the instance goes out of scope (Constructors not called)

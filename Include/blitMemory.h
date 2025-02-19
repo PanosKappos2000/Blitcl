@@ -12,10 +12,10 @@
 #ifdef BLITZEN_ENGINE
     #include "Core/blitAssert.h"
 #else
-    #if _MSC_VER
-        #define BDB_BREAK __debugbreak();
+    #ifdef _WIN32
+        #define BDB_BREAK() __debugbreak();
     #else
-        #define BDB_BREAK __builtin_trap();
+        #define BDB_BREAK() __builtin_trap();
     #endif
     #define BLIT_ASSERT(expr)                                                                               \
                                     if(expr){}                                                                  \
@@ -23,7 +23,7 @@
                                     {                                                                           \
                                         printf(#expr);                                                          \
                                         printf("\n");                                                           \
-                                        BDB_BREAK                                                               \
+                                        BDB_BREAK()                                                               \
                                     }
 #endif
 
@@ -170,8 +170,9 @@ namespace Blitcl
         return new T(std::move(data));
     }
 
+    // Probably not a useful allocator
     template<typename T, AllocationType A>
-    T* NewAlloc(size_t size, T& data)
+    T* NewAlloc(size_t size, const T& data)
     {
         LogAllocation(A, size * sizeof(T));
 
@@ -197,5 +198,12 @@ namespace Blitcl
     {
         LogFree(alloc, sizeof(T));
         delete pToDestroy;
+    }
+
+    template<typename T>
+    void DeleteAlloc(AllocationType alloc, T* pToDestroy, size_t size)
+    {
+        LogFree(alloc, size * sizeof(T));
+        delete [] pToDestroy;
     }
 }
