@@ -143,31 +143,44 @@ namespace Blitcl
 
     // This allocation function calls the constructor of the object that gets allocated(the constructor must have no parameters)
     template<typename T, typename... P>
-    T* NewAlloc(AllocationType alloc, P&... params)
+    T* NewAlloc(AllocationType alloc, const P&... params)
     {
         LogAllocation(alloc, sizeof(T));
         return new T(params...);
     }
     
-    template<typename T, AllocationType A>
+    // Allocates a large a specific number of T, with its default constructor
+    template<typename T, AllocationType alloc>
     T* NewAlloc(size_t size)
     {
-        LogAllocation(A, size * sizeof(T));
+        LogAllocation(alloc, size * sizeof(T));
         return new T[size];
     }
 
-    template<typename T, AllocationType A>
+    // Copy constructor allocation of one instance of type T
+    template<typename T, AllocationType alloc>
     T* NewAlloc(const T& data)
     {
-        LogAllocation(A, sizeof(T));
+        LogAllocation(alloc, sizeof(T));
         return new T(data);
     }
 
-    template<typename T, AllocationType A>
+    // Move constructor allocation of one instance of type T
+    template<typename T, AllocationType alloc>
     T* NewAlloc(T&& data)
     {
-        LogAllocation(A, sizeof(T));
+        LogAllocation(alloc, sizeof(T));
         return new T(std::move(data));
+    }
+
+    // Returns allocated memory of type T, after copyting data from the pointer parameter
+    template<typename T, AllocationType alloc>
+    T* NewAlloc(T* pData)
+    {
+        LogAllocation(alloc, sizeof(T));
+        T* res = new T;
+        memcpy(res, pData, sizeof(T));
+        return res;
     }
 
     // Probably not a useful allocator

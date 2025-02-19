@@ -337,15 +337,7 @@ namespace Blitcl
         SmartPointer(T* pDataToCopy)
         {
             // Allocated on the heap
-            m_pData = NewAlloc<T>(A);
-
-            if (pDataToCopy)
-            {
-                // Copy the data over to the member variable
-                Memcpy(m_pData, pDataToCopy, sizeof(T));
-                // Redirect the pointer, in case the user wants to use it again
-                pDataToCopy = m_pData;
-            }
+            m_pData = NewAlloc<T, A>(pDataToCopy);
         }
 
         SmartPointer(const T& data)
@@ -360,7 +352,7 @@ namespace Blitcl
 
         // This version of the constructor has template parameter deduction
         template<typename... P>
-        SmartPointer(P... params)
+        SmartPointer(const P&... params)
         {
             // Allocated on the heap
             m_pData = NewAlloc<T>(A, params...);
@@ -374,19 +366,19 @@ namespace Blitcl
 
         ~SmartPointer()
         {
-            // Call the additional destructor function if it was given on construction
-            if (m_pfnDstr)
+            if (m_pData)
             {
-                if (m_pData)
+                // Call the additional destructor function if it was given on construction
+                if (m_pfnDstr)
+                {
                     m_pfnDstr(m_pData);
+                    LogFree(A, sizeof(T));
+                }
 
-                // The smart pointer trusts that the custom destructor did its job and free the block of memory
-                LogFree(A, sizeof(T));
+                // Does the job using delete, if the user did not provide a custom destructor
+                else
+                    DeleteAlloc(A, m_pData);
             }
-
-            // Does the job using delete, if the user did not provide a custom destructor
-            else
-                DeleteAlloc(A, m_pData);
         }
     private:
         T* m_pData;
