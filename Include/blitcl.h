@@ -332,8 +332,6 @@ namespace Blitcl
     {
     public:
 
-        using Dstr = void(*)(T*);
-
         SmartPointer(T* pDataToCopy)
         {
             // Allocated on the heap
@@ -358,8 +356,6 @@ namespace Blitcl
             m_pData = NewAlloc<T>(A, params...);
         }
 
-        inline void SetCustomDestructor(Dstr func) { m_pfnDstr = func; }
-
         inline T* Data() { return m_pData; }
 
         inline T* operator ->() { return m_pData; }
@@ -368,23 +364,11 @@ namespace Blitcl
         {
             if (m_pData)
             {
-                // Call the additional destructor function if it was given on construction
-                if (m_pfnDstr)
-                {
-                    m_pfnDstr(m_pData);
-                    LogFree(A, sizeof(T));
-                }
-
-                // Does the job using delete, if the user did not provide a custom destructor
-                else
-                    DeleteAlloc(A, m_pData);
+                DeleteAlloc(A, m_pData);
             }
         }
     private:
         T* m_pData;
-
-        // Additional destructor function currently fixed type (void(*)(T*))
-        Dstr m_pfnDstr = 0;
     };
 
     // Allocates a set amount of size on the heap, until the instance goes out of scope (Constructors not called)
