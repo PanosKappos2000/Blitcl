@@ -266,7 +266,7 @@ namespace Blitcl
             size_t temp = m_capacity;
             m_capacity = newSize * arrayCapacityMultiplier;
             T* pTemp = m_pBlock;
-            m_pBlock = reinterpret_cast<T*>(Alloc(AllocationType::DynamicArray, m_capacity * sizeof(T)));
+            m_pBlock = NewAlloc<T, Blitcl::AllocationType::DynamicArray>(newSize * arrayCapacityMultiplier);
             if (m_size != 0)
             {
                 Memcpy(m_pBlock, pTemp, m_size * sizeof(T));
@@ -325,9 +325,15 @@ namespace Blitcl
         T m_array[S];
     };
 
+    struct Dummy
+    {
+        uint8_t scratch;
 
-
-    template<typename T, AllocationType A = Blitcl::AllocationType::SmartPointer>
+        inline void destroy() {
+            BLIT_ASSERT(0)
+        }
+    };
+    template<typename T, AllocationType A = Blitcl::AllocationType::SmartPointer, typename Caller = Dummy>
     class SmartPointer
     {
     public:
@@ -360,15 +366,26 @@ namespace Blitcl
 
         inline T* operator ->() { return m_pData; }
 
+        void SetDstrCaller(Caller* pCaller) { m_pCaller = pCaller; }
+
         ~SmartPointer()
         {
             if (m_pData)
             {
-                DeleteAlloc(A, m_pData);
+                if (m_pCaller)
+                {
+                    m_pCaller->destroy();
+                    LogFree(A, sizeof(T));
+                }
+                else
+                    DeleteAlloc(A, m_pData);
             }
         }
     private:
         T* m_pData;
+
+        // This guy must be someone with a destroy() function
+        Caller* m_pCaller = nullptr;
     };
 
     // Allocates a set amount of size on the heap, until the instance goes out of scope (Constructors not called)
