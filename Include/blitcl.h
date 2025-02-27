@@ -325,15 +325,16 @@ namespace Blitcl
         T m_array[S];
     };
 
-    struct Dummy
+    struct DummyFunctor
     {
         uint8_t scratch;
 
-        inline void destroy() {
-            BLIT_ASSERT(0)
+        inline void operator()()
+        {
+			BLIT_ASSERT(0)
         }
     };
-    template<typename T, AllocationType A = Blitcl::AllocationType::SmartPointer, typename Caller = Dummy>
+    template<typename T, AllocationType A = Blitcl::AllocationType::SmartPointer, typename Functor = DummyFunctor>
     class SmartPointer
     {
     public:
@@ -366,15 +367,19 @@ namespace Blitcl
 
         inline T* operator ->() { return m_pData; }
 
-        void SetDstrCaller(Caller* pCaller) { m_pCaller = pCaller; }
+		inline T& operator *() { return *m_pData; }
+
+        inline T* operator &() { return m_pData; }
+
+        void SetDstrFunctor(Functor* pCaller) { m_pFunctor = pCaller; }
 
         ~SmartPointer()
         {
             if (m_pData)
             {
-                if (m_pCaller)
+                if (m_pFunctor)
                 {
-                    m_pCaller->destroy();
+                    (*m_pFunctor)();
                     LogFree(A, sizeof(T));
                 }
                 else
@@ -385,7 +390,7 @@ namespace Blitcl
         T* m_pData;
 
         // This guy must be someone with a destroy() function
-        Caller* m_pCaller = nullptr;
+        Functor* m_pFunctor = nullptr;
     };
 
     // Allocates a set amount of size on the heap, until the instance goes out of scope (Constructors not called)
