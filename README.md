@@ -1,9 +1,9 @@
 # BlitzenContainerLibrary
 
-Slightly modified version of the utility written in BlitzenEngine0. It is more more flexible than the original so that it can be used in other projects.
+Slightly modified version of the library written in BlitzenEngine0.
 
-Replaces some important STL constructs, like std::vector and std::unique_ptr. It is less flexible however and not meant to be shipped, it is written for academic purposes and not a true replacement of the STL. 
+Implements containers similar to the STL but with less functionality and obviously not as well made.
 
-But it works fine for Blitzen and I would like to expand it by using it on other projects.
+Uses custom allocation functions to log allocation sizes, and check for memory leaks at the end of the application.
 
-To make it work, the memory manager needs to be intialized before any kind of allocation is done and its destructor needs to be called after everything is freed, otherwise it will assert. The Blitcl::MemoryManagerState* Blitcl::MemoryManagerState::s_pState static pointer needs to be redeclared with the above syntax on the file that initializes the memory manager. 
+For it to work a BlitzenCore::MemoryManager needs to be created before any container.
